@@ -1,0 +1,5 @@
+// Windows resource file
+#include <windows.h>
+
+// Application Icon (ID = 1 for main icon)
+1 ICON "favicon.ico"

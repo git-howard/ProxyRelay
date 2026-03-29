@@ -1,0 +1,229 @@
+适用于 .NET Framework MSBuild 版本 17.14.23+b0019275e
+
+  Updating build timestamp...
+  UserManager.cpp
+  MainWindow.cpp
+D:\Code\ProxyRelay\src\UserManager.cpp(4,10): error C1083: 无法打开包括文件: “RuleManager.h”: No such file or directory [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(361,19): error C2065: “hTab_”: 未声明的标识符 [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(361,5): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(361,5): error C2365: “GetWindowRect”: 重定义；以前的定义是“函数” [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+      C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\um\winuser.h(9057,1):
+      参见“GetWindowRect”的声明
+  
+D:\Code\ProxyRelay\src\MainWindow.cpp(362,35): error C2065: “hwnd_”: 未声明的标识符 [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(362,5): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(362,5): error C2365: “MapWindowPoints”: 重定义；以前的定义是“函数” [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+      C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\um\winuser.h(9560,1):
+      参见“MapWindowPoints”的声明
+  
+D:\Code\ProxyRelay\src\MainWindow.cpp(365,19): error C2065: “hTab_”: 未声明的标识符 [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(365,5): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(365,5): error C2365: “GetClientRect”: 重定义；以前的定义是“函数” [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+      C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\um\winuser.h(9044,1):
+      参见“GetClientRect”的声明
+  
+D:\Code\ProxyRelay\src\MainWindow.cpp(366,5): error C2062: 意外的类型“int”  [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(376,5): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(379,9): error C2065: “hwnd_”: 未声明的标识符 [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(379,39): error C2065: “hInstance_”: 未声明的标识符 [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(381,5): error C2143: 语法错误: 缺少“;”(在“SendMessageW”的前面) [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(381,5): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(381,5): error C2377: “DWORD”: 重定义；typedef 不能由任何其他符号重载 [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+      C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\shared\minwindef.h(156,29):
+      参见“DWORD”的声明
+  
+D:\Code\ProxyRelay\src\MainWindow.cpp(381,5): error C2365: “SendMessageW”: 重定义；以前的定义是“函数” [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+      C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\um\winuser.h(3709,1):
+      参见“SendMessageW”的声明
+  
+D:\Code\ProxyRelay\src\MainWindow.cpp(382,5): error C2143: 语法错误: 缺少“;”(在“SendMessageW”的前面) [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(382,5): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(382,5): error C2377: “BOOL”: 重定义；typedef 不能由任何其他符号重载 [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+      C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\shared\minwindef.h(157,29):
+      参见“BOOL”的声明
+  
+D:\Code\ProxyRelay\src\MainWindow.cpp(382,5): error C2365: “SendMessageW”: 重定义；以前的定义是“函数” [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+      C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\um\winuser.h(3709,1):
+      参见“SendMessageW”的声明
+  
+D:\Code\ProxyRelay\src\MainWindow.cpp(383,5): error C2143: 语法错误: 缺少“;”(在“SendMessageW”的前面) [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(383,5): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(383,5): error C2086: “int BOOL”: 重定义 [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+      D:\Code\ProxyRelay\src\MainWindow.cpp(382,5):
+      参见“BOOL”的声明
+  
+D:\Code\ProxyRelay\src\MainWindow.cpp(383,5): error C2365: “SendMessageW”: 重定义；以前的定义是“函数” [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+      C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\um\winuser.h(3709,1):
+      参见“SendMessageW”的声明
+  
+D:\Code\ProxyRelay\src\MainWindow.cpp(384,5): error C2143: 语法错误: 缺少“;”(在“SendMessageW”的前面) [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(384,5): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(384,5): error C2086: “int BOOL”: 重定义 [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+      D:\Code\ProxyRelay\src\MainWindow.cpp(382,5):
+      参见“BOOL”的声明
+  
+D:\Code\ProxyRelay\src\MainWindow.cpp(384,5): error C2365: “SendMessageW”: 重定义；以前的定义是“函数” [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+      C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\um\winuser.h(3709,1):
+      参见“SendMessageW”的声明
+  
+D:\Code\ProxyRelay\src\MainWindow.cpp(385,49): error C2065: “hFont”: 未声明的标识符 [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(385,5): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(385,5): error C2365: “SendMessageW”: 重定义；以前的定义是“函数” [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+      C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\um\winuser.h(3709,1):
+      参见“SendMessageW”的声明
+  
+D:\Code\ProxyRelay\src\MainWindow.cpp(386,5): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(386,5): error C2365: “SetWindowTheme”: 重定义；以前的定义是“函数” [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+      C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\um\uxtheme.h(1153,1):
+      参见“SetWindowTheme”的声明
+  
+D:\Code\ProxyRelay\src\MainWindow.cpp(390,5): error C3927: "->": 非函数声明符后不允许尾随返回类型 [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(390,8): error C3484: 语法错误: 返回类型前应为“->” [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(390,9): error C3613: “->”后缺少返回类型(假定为“int”) [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(390,5): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(390,5): error C2371: “lvc”: 重定义；不同的基类型 [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+      D:\Code\ProxyRelay\src\MainWindow.cpp(389,15):
+      参见“lvc”的声明
+  
+D:\Code\ProxyRelay\src\MainWindow.cpp(390,9): error C2146: 语法错误: 缺少“;”(在标识符“mask”的前面) [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(392,5): error C3927: "->": 非函数声明符后不允许尾随返回类型 [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(392,8): error C3484: 语法错误: 返回类型前应为“->” [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(392,9): error C3613: “->”后缺少返回类型(假定为“int”) [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(392,5): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(392,5): error C2371: “lvc”: 重定义；不同的基类型 [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+      D:\Code\ProxyRelay\src\MainWindow.cpp(389,15):
+      参见“lvc”的声明
+  
+D:\Code\ProxyRelay\src\MainWindow.cpp(392,9): error C2146: 语法错误: 缺少“;”(在标识符“pszText”的前面) [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(392,34): error C3927: "->": 非函数声明符后不允许尾随返回类型 [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(392,37): error C3484: 语法错误: 返回类型前应为“->” [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(392,38): error C3613: “->”后缺少返回类型(假定为“int”) [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(392,34): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(392,34): error C2371: “lvc”: 重定义；不同的基类型 [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+      D:\Code\ProxyRelay\src\MainWindow.cpp(389,15):
+      参见“lvc”的声明
+  
+D:\Code\ProxyRelay\src\MainWindow.cpp(392,38): error C2146: 语法错误: 缺少“;”(在标识符“cx”的前面) [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(393,5): error C2062: 意外的类型“int”  [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(395,5): error C3927: "->": 非函数声明符后不允许尾随返回类型 [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(395,8): error C3484: 语法错误: 返回类型前应为“->” [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(395,9): error C3613: “->”后缺少返回类型(假定为“int”) [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(395,5): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(395,5): error C2371: “lvc”: 重定义；不同的基类型 [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+      D:\Code\ProxyRelay\src\MainWindow.cpp(389,15):
+      参见“lvc”的声明
+  
+D:\Code\ProxyRelay\src\MainWindow.cpp(395,9): error C2146: 语法错误: 缺少“;”(在标识符“pszText”的前面) [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(395,41): error C3927: "->": 非函数声明符后不允许尾随返回类型 [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(395,44): error C3484: 语法错误: 返回类型前应为“->” [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(395,45): error C3613: “->”后缺少返回类型(假定为“int”) [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(395,41): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(395,41): error C2371: “lvc”: 重定义；不同的基类型 [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+      D:\Code\ProxyRelay\src\MainWindow.cpp(389,15):
+      参见“lvc”的声明
+  
+D:\Code\ProxyRelay\src\MainWindow.cpp(395,45): error C2146: 语法错误: 缺少“;”(在标识符“cx”的前面) [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(396,5): error C2062: 意外的类型“int”  [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(398,5): error C3927: "->": 非函数声明符后不允许尾随返回类型 [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(398,8): error C3484: 语法错误: 返回类型前应为“->” [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(398,9): error C3613: “->”后缺少返回类型(假定为“int”) [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(398,5): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(398,5): error C2371: “lvc”: 重定义；不同的基类型 [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+      D:\Code\ProxyRelay\src\MainWindow.cpp(389,15):
+      参见“lvc”的声明
+  
+D:\Code\ProxyRelay\src\MainWindow.cpp(398,9): error C2146: 语法错误: 缺少“;”(在标识符“pszText”的前面) [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(398,40): error C3927: "->": 非函数声明符后不允许尾随返回类型 [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(398,43): error C3484: 语法错误: 返回类型前应为“->” [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(398,44): error C3613: “->”后缺少返回类型(假定为“int”) [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(398,40): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(398,40): error C2371: “lvc”: 重定义；不同的基类型 [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+      D:\Code\ProxyRelay\src\MainWindow.cpp(389,15):
+      参见“lvc”的声明
+  
+D:\Code\ProxyRelay\src\MainWindow.cpp(398,44): error C2146: 语法错误: 缺少“;”(在标识符“cx”的前面) [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(399,5): error C2062: 意外的类型“int”  [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(401,5): error C3927: "->": 非函数声明符后不允许尾随返回类型 [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(401,8): error C3484: 语法错误: 返回类型前应为“->” [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(401,9): error C3613: “->”后缺少返回类型(假定为“int”) [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(401,5): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(401,5): error C2371: “lvc”: 重定义；不同的基类型 [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+      D:\Code\ProxyRelay\src\MainWindow.cpp(389,15):
+      参见“lvc”的声明
+  
+D:\Code\ProxyRelay\src\MainWindow.cpp(401,9): error C2146: 语法错误: 缺少“;”(在标识符“pszText”的前面) [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(401,44): error C3927: "->": 非函数声明符后不允许尾随返回类型 [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(401,47): error C3484: 语法错误: 返回类型前应为“->” [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(401,48): error C3613: “->”后缺少返回类型(假定为“int”) [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(401,44): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(401,44): error C2371: “lvc”: 重定义；不同的基类型 [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+      D:\Code\ProxyRelay\src\MainWindow.cpp(389,15):
+      参见“lvc”的声明
+  
+D:\Code\ProxyRelay\src\MainWindow.cpp(401,48): error C2146: 语法错误: 缺少“;”(在标识符“cx”的前面) [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(402,5): error C2062: 意外的类型“int”  [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(404,5): error C3927: "->": 非函数声明符后不允许尾随返回类型 [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(404,8): error C3484: 语法错误: 返回类型前应为“->” [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(404,9): error C3613: “->”后缺少返回类型(假定为“int”) [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+  Dialogs.cpp
+D:\Code\ProxyRelay\src\MainWindow.cpp(404,5): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(404,5): error C2371: “lvc”: 重定义；不同的基类型 [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+      D:\Code\ProxyRelay\src\MainWindow.cpp(389,15):
+      参见“lvc”的声明
+  
+D:\Code\ProxyRelay\src\MainWindow.cpp(404,9): error C2146: 语法错误: 缺少“;”(在标识符“pszText”的前面) [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(404,44): error C3927: "->": 非函数声明符后不允许尾随返回类型 [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(404,47): error C3484: 语法错误: 返回类型前应为“->” [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(404,48): error C3613: “->”后缺少返回类型(假定为“int”) [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(404,44): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(404,44): error C2371: “lvc”: 重定义；不同的基类型 [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+      D:\Code\ProxyRelay\src\MainWindow.cpp(389,15):
+      参见“lvc”的声明
+  
+D:\Code\ProxyRelay\src\MainWindow.cpp(404,48): error C2146: 语法错误: 缺少“;”(在标识符“cx”的前面) [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(405,5): error C2062: 意外的类型“int”  [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(407,5): error C3927: "->": 非函数声明符后不允许尾随返回类型 [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(407,8): error C3484: 语法错误: 返回类型前应为“->” [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(407,9): error C3613: “->”后缺少返回类型(假定为“int”) [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(407,5): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(407,5): error C2371: “lvc”: 重定义；不同的基类型 [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+      D:\Code\ProxyRelay\src\MainWindow.cpp(389,15):
+      参见“lvc”的声明
+  
+D:\Code\ProxyRelay\src\MainWindow.cpp(407,9): error C2146: 语法错误: 缺少“;”(在标识符“pszText”的前面) [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(407,44): error C3927: "->": 非函数声明符后不允许尾随返回类型 [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(407,47): error C3484: 语法错误: 返回类型前应为“->” [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(407,48): error C3613: “->”后缺少返回类型(假定为“int”) [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(407,44): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(407,44): error C2371: “lvc”: 重定义；不同的基类型 [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+      D:\Code\ProxyRelay\src\MainWindow.cpp(389,15):
+      参见“lvc”的声明
+  
+D:\Code\ProxyRelay\src\MainWindow.cpp(407,48): error C2146: 语法错误: 缺少“;”(在标识符“cx”的前面) [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(408,5): error C2062: 意外的类型“int”  [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(410,5): error C3927: "->": 非函数声明符后不允许尾随返回类型 [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(410,8): error C3484: 语法错误: 返回类型前应为“->” [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(410,9): error C3613: “->”后缺少返回类型(假定为“int”) [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(410,5): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\MainWindow.cpp(410,5): error C2371: “lvc”: 重定义；不同的基类型 [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+      D:\Code\ProxyRelay\src\MainWindow.cpp(389,15):
+      参见“lvc”的声明
+  
+D:\Code\ProxyRelay\src\MainWindow.cpp(410,5): error C1003: 错误计数超过 100；正在停止编译 [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\Dialogs.cpp(587,25): error C2267: “BanDialogProc”: 具有块范围的静态函数非法 [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\Dialogs.cpp(587,25): error C2601: “BanDialogProc”: 本地函数定义是非法的 [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+      D:\Code\ProxyRelay\src\Dialogs.cpp(561,36):
+      此行有一个“{”没有匹配项
+  
+D:\Code\ProxyRelay\src\Dialogs.cpp(625,13): error C2267: “CreateBanDialogWindow”: 具有块范围的静态函数非法 [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+D:\Code\ProxyRelay\src\Dialogs.cpp(625,13): error C2601: “CreateBanDialogWindow”: 本地函数定义是非法的 [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+      D:\Code\ProxyRelay\src\Dialogs.cpp(561,36):
+      此行有一个“{”没有匹配项
+  
+D:\Code\ProxyRelay\src\Dialogs.cpp(672,18): error C2601: “MainWindow::ShowAddBanDialog”: 本地函数定义是非法的 [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+      D:\Code\ProxyRelay\src\Dialogs.cpp(561,36):
+      此行有一个“{”没有匹配项
+  
+D:\Code\ProxyRelay\src\Dialogs.cpp(561,36): error C1075: “{”: 未找到匹配令牌 [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+  Version.cpp
+  正在生成代码...

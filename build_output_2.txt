@@ -1,0 +1,10 @@
+适用于 .NET Framework MSBuild 版本 17.14.23+b0019275e
+
+  Updating build timestamp...
+  UserManager.cpp
+D:\Code\ProxyRelay\src\UserManager.cpp(21,67): error C2039: "IsBlacklisted": 不是 "Database" 的成员 [D:\Code\ProxyRelay\build\ProxyRelay.vcxproj]
+      D:\Code\ProxyRelay\include\Database.h(67,7):
+      参见“Database”的声明
+  
+  Version.cpp
+  正在生成代码...
