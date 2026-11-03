@@ -1,0 +1,8 @@
+#pragma once
+// Generated build version header
+#define BUILD_VERSION_MAJOR 1
+#define BUILD_VERSION_MINOR 0
+#define BUILD_VERSION_BUILD 20261024
+#define BUILD_VERSION_REV 2016
+#define APP_BUILD_VER_STR "1.0.20261024.2016"
+#define APP_BUILD_VER_WSTR L"1.0.20261024.2016"

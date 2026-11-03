@@ -1,0 +1,88 @@
+# ==========================================
+# SQLite 数据库与数据文件 (严禁上传)
+# ==========================================
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+*.db3
+proxy.db
+router_*.db
+
+# ==========================================
+# 凭据、私钥与证书文件 (严禁上传)
+# ==========================================
+*.key
+*.pem
+*.crt
+*.pfx
+*.p12
+*.cer
+*.der
+cert/
+certs/
+/openwrt/cert/
+/win/cert/
+/win/certs/
+ProxyRelay.crt
+ProxyRelay.pfx
+openwrt/test_auth*
+
+# ==========================================
+# 运行时数据、缓存与日志 (严禁上传)
+# ==========================================
+*.log
+/win/log/
+/win/data/
+clash_*.yaml
+chnroute.txt
+
+# ==========================================
+# 构建产物、临时文件与外部二进制
+# ==========================================
+/build/
+/openwrt/build/
+/win/build/
+/bin/
+/obj/
+*.o
+*.obj
+*.a
+*.so
+*.exe
+*.sys
+*.dll
+*.ipk
+*.apk
+*.rar
+*.zip
+*.7z
+*.tar.gz
+*.tgz
+*.dat
+win.rar
+
+# 保留 Windows 编译所需的 WebView2 静态导入库
+!win/libs/webview2/build/native/x64/WebView2LoaderStatic.lib
+!win/libs/webview2/build/native/x86/WebView2LoaderStatic.lib
+!win/libs/webview2/build/native/arm64/WebView2LoaderStatic.lib
+
+# 第三方依赖与无用工具目录
+/openwrt/tools/
+/win/WinDivert/
+
+# ==========================================
+# IDE、开发助手与系统临时文件
+# ==========================================
+.workbuddy/
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+*.sln.docstates
+Thumbs.db
+Desktop.ini
+.DS_Store

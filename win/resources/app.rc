@@ -1,0 +1,35 @@
+// Windows resource file
+#include <windows.h>
+#include "BuildVersion.h"
+
+// Application Icon (ID = 1 for main icon)
+1 ICON "favicon.ico"
+
+VS_VERSION_INFO VERSIONINFO
+FILEVERSION     BUILD_VERSION_MAJOR,BUILD_VERSION_MINOR,BUILD_VERSION_BUILD,BUILD_VERSION_REV
+PRODUCTVERSION  BUILD_VERSION_MAJOR,BUILD_VERSION_MINOR,BUILD_VERSION_BUILD,BUILD_VERSION_REV
+FILEFLAGSMASK   VS_FFI_FILEFLAGSMASK
+FILEFLAGS       0
+FILEOS          VOS_NT_WINDOWS32
+FILETYPE        VFT_APP
+FILESUBTYPE     VFT2_UNKNOWN
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "080404b0"
+        BEGIN
+            VALUE "CompanyName",      "ProxyRelay"
+            VALUE "FileDescription",  "ProxyRelay"
+            VALUE "FileVersion",      APP_BUILD_VER_STR
+            VALUE "InternalName",     "ProxyRelay.exe"
+            VALUE "LegalCopyright",   "Copyright (C) 2026 ProxyRelay"
+            VALUE "OriginalFilename", "ProxyRelay.exe"
+            VALUE "ProductName",      "ProxyRelay"
+            VALUE "ProductVersion",   APP_BUILD_VER_STR
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x804, 1200
+    END
+END

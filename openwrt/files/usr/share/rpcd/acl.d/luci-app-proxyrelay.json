@@ -1,0 +1,11 @@
+{
+	"luci-app-proxyrelay": {
+		"description": "Grant UCI and service access for luci-app-proxyrelay",
+		"read": {
+			"uci": [ "proxyrelay" ]
+		},
+		"write": {
+			"uci": [ "proxyrelay" ]
+		}
+	}
+}

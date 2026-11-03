@@ -1,0 +1,190 @@
+#!/bin/sh
+# ProxyRelay 透明代理防火墙联动脚本
+# 兼容 OpenWrt 22.03+ (fw4 / nftables) 与 经典版 (fw3 / iptables)
+# 支持入参: start | stop | reload | restart | status
+
+ACTION="${1:-reload}"
+UCI_ENABLED=$(uci -q get proxyrelay.global.enabled || echo 1)
+UCI_TPROXY_ENABLED=$(uci -q get proxyrelay.global.tproxy_enabled || echo 0)
+TPROXY_PORT=$(uci -q get proxyrelay.global.tproxy_port || echo 12345)
+WEB_PORT=$(uci -q get proxyrelay.global.web_port || echo 8080)
+AUTO_PORT=$(uci -q get proxyrelay.global.auto_proxy_port || echo 1080)
+
+# 判断是否采用 fw4 (nftables)
+is_fw4() {
+    command -v nft >/dev/null 2>&1 && nft list tables 2>/dev/null | grep -q 'table inet fw4'
+}
+
+# 清理 nftables 规则
+cleanup_nft() {
+    ip rule del fwmark 0x1 table 100 2>/dev/null || true
+    ip route flush table 100 2>/dev/null || true
+    nft delete table inet proxyrelay 2>/dev/null || true
+}
+
+# 应用 nftables 规则 (OpenWrt 22.03+ / fw4)
+apply_nft() {
+    cleanup_nft
+
+    # 若全局未启用或透明代理关闭，只清理不注入
+    [ "$UCI_ENABLED" = "1" ] || return 0
+    [ "$UCI_TPROXY_ENABLED" = "1" ] || return 0
+
+    # 配置 UDP TPROXY 所需的策略路由表
+    ip rule add fwmark 0x1 table 100 2>/dev/null || true
+    ip route replace local default dev lo table 100 2>/dev/null || true
+
+    nft -f - << EOF
+table inet proxyrelay {
+    chain prerouting_mangle {
+        type filter hook prerouting priority mangle - 5; policy accept;
+
+        # 忽略环回流量
+        iif "lo" return
+
+        # 忽略目的地址为私网网段流量
+        ip daddr { 127.0.0.0/8, 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 169.254.0.0/16, 224.0.0.0/4, 240.0.0.0/4 } return
+
+        # 忽略 ProxyRelay 本身的服务端口 (Web 控制台 / 智能分流端口 / TProxy 本身)
+        udp dport { $WEB_PORT, $AUTO_PORT, $TPROXY_PORT } return
+
+        # 将局域网客户端发出的 UDP 流量通过 TPROXY 引导至本地代理端口并保留原始目标地址
+        meta l4proto udp meta mark set 0x1 tproxy to :$TPROXY_PORT accept
+    }
+
+    chain prerouting_nat {
+        type nat hook prerouting priority dstnat - 5; policy accept;
+
+        # 忽略环回流量
+        iif "lo" return
+
+        # 忽略目的地址为私网网段流量
+        ip daddr { 127.0.0.0/8, 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 169.254.0.0/16, 224.0.0.0/4, 240.0.0.0/4 } return
+
+        # 忽略 ProxyRelay 本身的服务端口
+        tcp dport { $WEB_PORT, $AUTO_PORT, $TPROXY_PORT } return
+
+        # 重定向局域网客户端发出的 TCP 流量到本地 TProxy 端口
+        meta l4proto tcp redirect to :$TPROXY_PORT
+    }
+
+    chain postrouting {
+        type nat hook postrouting priority srcnat; policy accept;
+
+        # 旁路由回程伪装：当客户端流量从 br-lan 转发回主路由时伪装源 IP，避免主路由策略路由造成死循环
+        oifname "br-lan" fib saddr type != local masquerade
+    }
+
+    chain input_filter {
+        type filter hook input priority filter - 5; policy accept;
+
+        # 1. 仅允许环回接口 (本机) 直接访问透明代理端口
+        iif "lo" accept
+
+        # 2. 允许经过合法 DNAT 重定向的透明代理 TCP 流量
+        tcp dport $TPROXY_PORT ct status dnat accept
+
+        # 3. 阻断外部网络未经重定向直接访问透明代理端口
+        tcp dport $TPROXY_PORT reject with tcp reset
+        udp dport $TPROXY_PORT reject
+    }
+}
+EOF
+}
+
+# 清理 iptables 规则 (OpenWrt 21 及更早版本 / fw3)
+cleanup_iptables() {
+    ip rule del fwmark 0x1 table 100 2>/dev/null || true
+    ip route flush table 100 2>/dev/null || true
+    iptables -D INPUT -i lo -p tcp --dport $TPROXY_PORT -j ACCEPT 2>/dev/null || true
+    iptables -D INPUT -i lo -p udp --dport $TPROXY_PORT -j ACCEPT 2>/dev/null || true
+    iptables -D INPUT -p tcp --dport $TPROXY_PORT -m conntrack --ctstatus DNAT -j ACCEPT 2>/dev/null || true
+    iptables -D INPUT -p tcp --dport $TPROXY_PORT -j REJECT --reject-with tcp-reset 2>/dev/null || true
+    iptables -D INPUT -p udp --dport $TPROXY_PORT -j REJECT 2>/dev/null || true
+    iptables -t nat -D POSTROUTING -o br-lan -m addrtype ! --src-type LOCAL -j MASQUERADE 2>/dev/null || true
+    iptables -t nat -D PREROUTING -p tcp -j PROXYRELAY_TCP 2>/dev/null || true
+    iptables -t nat -F PROXYRELAY_TCP 2>/dev/null || true
+    iptables -t nat -X PROXYRELAY_TCP 2>/dev/null || true
+    iptables -t mangle -D PREROUTING -p udp -j PROXYRELAY_UDP 2>/dev/null || true
+    iptables -t mangle -F PROXYRELAY_UDP 2>/dev/null || true
+    iptables -t mangle -X PROXYRELAY_UDP 2>/dev/null || true
+}
+
+# 应用 iptables 规则 (OpenWrt 21 及更早版本 / fw3)
+apply_iptables() {
+    cleanup_iptables
+
+    [ "$UCI_ENABLED" = "1" ] || return 0
+    [ "$UCI_TPROXY_ENABLED" = "1" ] || return 0
+
+    ip rule add fwmark 0x1 table 100 2>/dev/null || true
+    ip route replace local default dev lo table 100 2>/dev/null || true
+
+    # 1. TCP 重定向链 (nat)
+    iptables -t nat -N PROXYRELAY_TCP 2>/dev/null || true
+    iptables -t nat -F PROXYRELAY_TCP 2>/dev/null || true
+    iptables -t nat -A PROXYRELAY_TCP -i lo -j RETURN
+    iptables -t nat -A PROXYRELAY_TCP -d 127.0.0.0/8 -j RETURN
+    iptables -t nat -A PROXYRELAY_TCP -d 10.0.0.0/8 -j RETURN
+    iptables -t nat -A PROXYRELAY_TCP -d 172.16.0.0/12 -j RETURN
+    iptables -t nat -A PROXYRELAY_TCP -d 192.168.0.0/16 -j RETURN
+    iptables -t nat -A PROXYRELAY_TCP -d 169.254.0.0/16 -j RETURN
+    iptables -t nat -A PROXYRELAY_TCP -d 224.0.0.0/4 -j RETURN
+    iptables -t nat -A PROXYRELAY_TCP -d 240.0.0.0/4 -j RETURN
+    iptables -t nat -A PROXYRELAY_TCP -p tcp -m multiport --dports $WEB_PORT,$AUTO_PORT,$TPROXY_PORT -j RETURN
+    iptables -t nat -A PROXYRELAY_TCP -p tcp -j REDIRECT --to-ports $TPROXY_PORT
+    iptables -t nat -I PREROUTING -p tcp -j PROXYRELAY_TCP
+
+    # 2. UDP TPROXY 链 (mangle)
+    iptables -t mangle -N PROXYRELAY_UDP 2>/dev/null || true
+    iptables -t mangle -F PROXYRELAY_UDP 2>/dev/null || true
+    iptables -t mangle -A PROXYRELAY_UDP -i lo -j RETURN
+    iptables -t mangle -A PROXYRELAY_UDP -d 127.0.0.0/8 -j RETURN
+    iptables -t mangle -A PROXYRELAY_UDP -d 10.0.0.0/8 -j RETURN
+    iptables -t mangle -A PROXYRELAY_UDP -d 172.16.0.0/12 -j RETURN
+    iptables -t mangle -A PROXYRELAY_UDP -d 192.168.0.0/16 -j RETURN
+    iptables -t mangle -A PROXYRELAY_UDP -d 169.254.0.0/16 -j RETURN
+    iptables -t mangle -A PROXYRELAY_UDP -d 224.0.0.0/4 -j RETURN
+    iptables -t mangle -A PROXYRELAY_UDP -d 240.0.0.0/4 -j RETURN
+    iptables -t mangle -A PROXYRELAY_UDP -p udp -m multiport --dports $WEB_PORT,$AUTO_PORT,$TPROXY_PORT -j RETURN
+    iptables -t mangle -A PROXYRELAY_UDP -p udp -j TPROXY --tproxy-mark 0x1/0x1 --on-port $TPROXY_PORT
+    iptables -t mangle -I PREROUTING -p udp -j PROXYRELAY_UDP
+
+    # 3. 旁路由回程伪装：避免主路由死循环
+    iptables -t nat -A POSTROUTING -o br-lan -m addrtype ! --src-type LOCAL -j MASQUERADE
+
+    # 4. 阻断外部网络直接访问透明代理端口 (仅允许本机 lo 及经 DNAT 重定向流量)
+    iptables -I INPUT -p udp --dport $TPROXY_PORT -j REJECT
+    iptables -I INPUT -i lo -p udp --dport $TPROXY_PORT -j ACCEPT
+    iptables -I INPUT -p tcp --dport $TPROXY_PORT -j REJECT --reject-with tcp-reset
+    iptables -I INPUT -p tcp --dport $TPROXY_PORT -m conntrack --ctstatus DNAT -j ACCEPT
+    iptables -I INPUT -i lo -p tcp --dport $TPROXY_PORT -j ACCEPT
+}
+
+case "$ACTION" in
+    start|reload|restart)
+        if is_fw4; then
+            apply_nft
+        else
+            apply_iptables
+        fi
+        ;;
+    stop)
+        if is_fw4; then
+            cleanup_nft
+        else
+            cleanup_iptables
+        fi
+        ;;
+    status)
+        if [ "$UCI_TPROXY_ENABLED" = "1" ]; then
+            echo "ProxyRelay transparent proxy firewall rules: ENABLED (Port: $TPROXY_PORT)"
+        else
+            echo "ProxyRelay transparent proxy firewall rules: DISABLED (Default Off)"
+        fi
+        ;;
+    *)
+        echo "Usage: $0 {start|stop|reload|restart|status}"
+        exit 1
+        ;;
+esac
