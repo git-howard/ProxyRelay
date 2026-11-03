@@ -302,6 +302,8 @@ public:
     bool RecordLoginFailure(const std::string& ip);
     int GetLoginFailures(const std::string& ip, int minutes);
     void CleanOldLoginFailures(int minutes);
+    void RecordAuthFailure(const std::string& ip);
+    void ClearAuthFailure(const std::string& ip);
 
     // 应用代理规则（全局代理按进程名路由）
     struct AppProxyRule {

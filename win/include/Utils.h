@@ -66,4 +66,9 @@ void LogAuthFailed(const std::string& user, const std::string& ip, const std::st
 void CleanOldLogs(int retentionDays);
 void CopyToClipboard(const std::wstring& text);
 
+// 字符串辅助工具
+std::string Trim(const std::string& s);
+std::vector<std::string> Split(const std::string& s, char delimiter);
+std::string ToLower(const std::string& s);
+
 } // namespace Utils

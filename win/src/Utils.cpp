@@ -545,4 +545,29 @@ void CopyToClipboard(const std::wstring& text) {
     CloseClipboard();
 }
 
+
+std::string Trim(const std::string& s) {
+    const char* ws = " \t\r\n";
+    size_t start = s.find_first_not_of(ws);
+    if (start == std::string::npos) return "";
+    size_t end = s.find_last_not_of(ws);
+    return s.substr(start, end - start + 1);
+}
+
+std::vector<std::string> Split(const std::string& s, char delimiter) {
+    std::vector<std::string> tokens;
+    std::string token;
+    std::istringstream tokenStream(s);
+    while (std::getline(tokenStream, token, delimiter)) {
+        tokens.push_back(token);
+    }
+    return tokens;
+}
+
+std::string ToLower(const std::string& s) {
+    std::string res = s;
+    std::transform(res.begin(), res.end(), res.begin(), [](unsigned char c) { return (char)::tolower(c); });
+    return res;
+}
+
 } // namespace Utils

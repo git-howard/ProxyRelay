@@ -1,4 +1,5 @@
 #include "SharedStatusManager.h"
+#include "ProxyServer.h"
 #include <sddl.h>
 #include <algorithm>
 #include <cstring>

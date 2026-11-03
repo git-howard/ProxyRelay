@@ -3332,6 +3332,14 @@ void Database::CleanOldLoginFailures(int minutes) {
     }
 }
 
+void Database::RecordAuthFailure(const std::string& ip) {
+    RecordLoginFailure(ip);
+}
+
+void Database::ClearAuthFailure(const std::string& ip) {
+    RemoveAutoBanByIP(ip);
+}
+
 // Clash 订阅管理
 bool Database::AddSubscription(const ClashSubscription& sub) {
     std::lock_guard<std::recursive_mutex> lock(mutex_);
