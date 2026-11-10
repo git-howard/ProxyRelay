@@ -13,6 +13,9 @@
 #include <poll.h>
 #include <cctype>
 #include <algorithm>
+#include <chrono>
+#include <cerrno>
+#include <arpa/inet.h>
 
 namespace {
 
@@ -102,11 +105,11 @@ std::string SniffSNI(const char* data, size_t len) {
 // 从 HTTP 请求头中解析 Host 域名
 std::string SniffHTTPHost(const char* data, size_t len) {
     if (len < 10) return "";
-    std::string s(data, std::min(len, static_cast<size_t>(1024)));
+    std::string s(data, std::min(len, static_cast<size_t>(8192)));
     if (s.rfind("GET ", 0) != 0 && s.rfind("POST ", 0) != 0 &&
         s.rfind("HEAD ", 0) != 0 && s.rfind("OPTIONS ", 0) != 0 &&
         s.rfind("PUT ", 0) != 0 && s.rfind("DELETE ", 0) != 0 &&
-        s.rfind("CONNECT ", 0) != 0) {
+        s.rfind("PATCH ", 0) != 0 && s.rfind("CONNECT ", 0) != 0) {
         return "";
     }
 
@@ -120,11 +123,17 @@ std::string SniffHTTPHost(const char* data, size_t len) {
     size_t endPos = s.find_first_of(":\r\n", pos);
     if (endPos == std::string::npos) endPos = s.length();
 
-    std::string host = Utils::Trim(s.substr(pos, endPos - pos));
+    std::string host = Utils::ToLower(Utils::Trim(s.substr(pos, endPos - pos)));
+    while (!host.empty() && host.back() == '.') host.pop_back();
+    if (host.empty()) return "";
     for (char c : host) {
         if (!isalnum(static_cast<unsigned char>(c)) && c != '.' && c != '-' && c != '_') {
             return "";
         }
+    }
+    in_addr ipv4{};
+    if (inet_pton(AF_INET, host.c_str(), &ipv4) == 1) {
+        return "";
     }
     return host;
 }
@@ -299,33 +308,82 @@ void TProxyServer::HandleTcpClient(SOCKET clientSocket, const std::string& clien
     }
 
     // 2. 尝试从客户端首包嗅探目标域名 (TLS SNI 或 HTTP Host)
+    // 支持现代浏览器后量子 TLS 1.3 (X25519MLKEM768) 跨多个 TCP 分段的大 ClientHello 包重组嗅探
     std::string targetDomain = "";
-    char peekBuf[2048] = {};
+    char peekBuf[8192] = {};
     struct pollfd pfd{};
     pfd.fd = clientSocket;
     pfd.events = POLLIN;
     if (poll(&pfd, 1, 350) > 0 && (pfd.revents & POLLIN)) {
         int peekLen = recv(clientSocket, peekBuf, sizeof(peekBuf), MSG_PEEK);
         if (peekLen > 0) {
-            targetDomain = SniffDomain(peekBuf, peekLen);
+            targetDomain = SniffDomain(peekBuf, static_cast<size_t>(peekLen));
+            if (targetDomain.empty() && peekLen >= 5 &&
+                static_cast<uint8_t>(peekBuf[0]) == 0x16 &&
+                static_cast<uint8_t>(peekBuf[1]) == 0x03) {
+                size_t tlsRecordLen = 5 + ((static_cast<size_t>(static_cast<uint8_t>(peekBuf[3])) << 8) |
+                                           static_cast<size_t>(static_cast<uint8_t>(peekBuf[4])));
+                if (tlsRecordLen > sizeof(peekBuf)) tlsRecordLen = sizeof(peekBuf);
+                auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(300);
+                int lastPeekLen = peekLen;
+                while (targetDomain.empty() && static_cast<size_t>(peekLen) < tlsRecordLen) {
+                    if (std::chrono::steady_clock::now() >= deadline) break;
+                    std::this_thread::sleep_for(std::chrono::milliseconds(5));
+                    int n = recv(clientSocket, peekBuf, sizeof(peekBuf), MSG_PEEK | MSG_DONTWAIT);
+                    if (n > lastPeekLen) {
+                        peekLen = n;
+                        lastPeekLen = n;
+                        targetDomain = SniffDomain(peekBuf, static_cast<size_t>(peekLen));
+                    } else if (n == 0 || (n < 0 && errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR)) {
+                        break;
+                    }
+                }
+            } else if (targetDomain.empty() && peekLen >= 4 &&
+                       std::string(peekBuf, static_cast<size_t>(peekLen)).find("\r\n\r\n") == std::string::npos) {
+                auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(150);
+                int lastPeekLen = peekLen;
+                while (targetDomain.empty() && static_cast<size_t>(peekLen) < sizeof(peekBuf)) {
+                    if (std::chrono::steady_clock::now() >= deadline) break;
+                    std::this_thread::sleep_for(std::chrono::milliseconds(5));
+                    int n = recv(clientSocket, peekBuf, sizeof(peekBuf), MSG_PEEK | MSG_DONTWAIT);
+                    if (n > lastPeekLen) {
+                        peekLen = n;
+                        lastPeekLen = n;
+                        targetDomain = SniffDomain(peekBuf, static_cast<size_t>(peekLen));
+                        if (std::string(peekBuf, static_cast<size_t>(peekLen)).find("\r\n\r\n") != std::string::npos) break;
+                    } else if (n == 0 || (n < 0 && errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR)) {
+                        break;
+                    }
+                }
+            }
         }
     }
 
     std::string displayTarget = targetDomain.empty() ? targetIP : targetDomain;
 
     // 3. 路由分流规则匹配 (真实域名 + 目标 IP 结合评估)
+    // 若已嗅探出真实公网域名，且目标 IP 为 Fake-IP (198.18.0.0/15) 或私网/回环地址（如 DNS 污染返回 127.0.0.1），
+    // 忽略虚假 IP 防止误触发“本地IP拒绝连接”规则
+    bool isFakeIp = (targetIP.compare(0, 7, "198.18.") == 0 || targetIP.compare(0, 7, "198.19.") == 0);
+    std::string matchIP = (!targetDomain.empty() && (isFakeIp || RuleManager::Instance().IsDirectIP(targetIP))) ? "" : targetIP;
     std::string matchedGroup;
     bool isFallback = false;
-    int proxyId = RuleManager::Instance().GetMatchingProxyId(targetIP, targetDomain, &matchedGroup, &isFallback);
+    int proxyId = RuleManager::Instance().GetMatchingProxyId(matchIP, targetDomain, &matchedGroup, &isFallback);
     if (proxyId == -2) { // 阻断规则
         ConnectionLogger::Instance().Log(user.username, clientIP, displayTarget, targetPort, "TPROXY_BLOCK", "防火墙规则阻断", inboundType);
         closesocket(clientSocket);
         return;
     }
 
-    // 4. 向上游建立连接 (走代理时优先传递嗅探到的真实域名由上游节点无污染解析；若直连或无域名则直连真实 IP)
+    // 4. 向上游建立连接 (走代理时优先传递嗅探到的真实域名由上游节点无污染解析；若直连且非 Fake-IP 则优先直连真实 IP，失败或 Fake-IP 时使用真实域名)
     std::string upstreamTarget = (proxyId == 0 || targetDomain.empty()) ? targetIP : targetDomain;
+    if (proxyId == 0 && isFakeIp && !targetDomain.empty()) {
+        upstreamTarget = targetDomain;
+    }
     auto connRes = ProxyServer::Instance().ConnectWithFallback(proxyId, upstreamTarget, targetPort, matchedGroup, isFallback);
+    if (connRes.socket == INVALID_SOCKET && proxyId == 0 && !targetDomain.empty() && upstreamTarget != targetDomain) {
+        connRes = ProxyServer::Instance().ConnectWithFallback(proxyId, targetDomain, targetPort, matchedGroup, isFallback);
+    }
     if (connRes.socket == INVALID_SOCKET) {
         std::string failReason = (proxyId == 0 || connRes.description.find("直连") != std::string::npos)
                                      ? "直连连接超时"
@@ -412,6 +470,10 @@ void TProxyServer::UdpListenerThread(int port) {
             int origPort = ntohs(origDst.sin_port);
             if (!isLocalhost && (origPort == port || origPort == 0)) {
                 // 外部直接发送至透明代理端口，严禁直接访问，直接忽略丢弃
+                continue;
+            }
+            if (origPort == 443) {
+                // 丢弃透明代理拦截到的 QUIC (UDP 443) 流量，促使客户端迅速回退至 TCP 443 进行 SNI 嗅探
                 continue;
             }
             UdpRelayManager::Instance().HandleTransparentUdp(udpListenSock_, clientAddr, origDst, buf, n);

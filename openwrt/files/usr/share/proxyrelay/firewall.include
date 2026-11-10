@@ -4,11 +4,26 @@
 # 支持入参: start | stop | reload | restart | status
 
 ACTION="${1:-reload}"
+DB_PATH=$(uci -q get proxyrelay.global.db_path || echo /etc/proxyrelay/proxy.db)
 UCI_ENABLED=$(uci -q get proxyrelay.global.enabled || echo 1)
-UCI_TPROXY_ENABLED=$(uci -q get proxyrelay.global.tproxy_enabled || echo 0)
-TPROXY_PORT=$(uci -q get proxyrelay.global.tproxy_port || echo 12345)
+UCI_TPROXY_ENABLED=$(uci -q get proxyrelay.global.tproxy_enabled)
+TPROXY_PORT=$(uci -q get proxyrelay.global.tproxy_port)
 WEB_PORT=$(uci -q get proxyrelay.global.web_port || echo 8080)
-AUTO_PORT=$(uci -q get proxyrelay.global.auto_proxy_port || echo 1080)
+AUTO_PORT=$(uci -q get proxyrelay.global.auto_proxy_port)
+
+# 若系统中存在 sqlite3 且数据库文件存在，优先从数据库同步最新配置，防止软件包重装覆盖 UCI 后状态不一致
+if command -v sqlite3 >/dev/null 2>&1 && [ -f "$DB_PATH" ]; then
+    DB_TPROXY_ENABLED=$(sqlite3 "$DB_PATH" "SELECT value FROM configs WHERE key='tproxy_enabled' LIMIT 1;" 2>/dev/null)
+    DB_TPROXY_PORT=$(sqlite3 "$DB_PATH" "SELECT value FROM configs WHERE key='tproxy_port' LIMIT 1;" 2>/dev/null)
+    DB_AUTO_PORT=$(sqlite3 "$DB_PATH" "SELECT value FROM configs WHERE key='auto_proxy_port' LIMIT 1;" 2>/dev/null)
+    [ -n "$DB_TPROXY_ENABLED" ] && UCI_TPROXY_ENABLED="$DB_TPROXY_ENABLED"
+    [ -n "$DB_TPROXY_PORT" ] && TPROXY_PORT="$DB_TPROXY_PORT"
+    [ -n "$DB_AUTO_PORT" ] && AUTO_PORT="$DB_AUTO_PORT"
+fi
+
+[ -z "$UCI_TPROXY_ENABLED" ] && UCI_TPROXY_ENABLED=0
+[ -z "$TPROXY_PORT" ] && TPROXY_PORT=12345
+[ -z "$AUTO_PORT" ] && AUTO_PORT=1080
 
 # 判断是否采用 fw4 (nftables)
 is_fw4() {
@@ -39,33 +54,56 @@ table inet proxyrelay {
     chain prerouting_mangle {
         type filter hook prerouting priority mangle - 5; policy accept;
 
-        # 忽略环回流量
+        # 忽略环回流量、非 IPv4 流量及代理自身发出的 0xff 标记流量
         iif "lo" return
+        meta nfproto != ipv4 return
+        meta mark 0xff return
 
-        # 忽略目的地址为私网网段流量
-        ip daddr { 127.0.0.0/8, 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 169.254.0.0/16, 224.0.0.0/4, 240.0.0.0/4 } return
+        # 局域网客户端 DNS (UDP 53) 透明拦截防污染（在私网白名单 return 前拦截，确保指向网关 10.0.0.254:53 的 DNS 也能按域名智能分流防污染）
+        iifname "br-lan" udp dport 53 meta mark set 0x1 tproxy ip to :$TPROXY_PORT accept
+
+        # 忽略目的地址为私网/保留网段的流量（注意：不包含 Fake-IP 198.18.0.0/15，以便透明代理解析其真实 SNI）
+        ip daddr { 0.0.0.0/8, 127.0.0.0/8, 10.0.0.0/8, 100.64.0.0/10, 172.16.0.0/12, 192.168.0.0/16, 169.254.0.0/16, 224.0.0.0/4, 240.0.0.0/4 } return
 
         # 忽略 ProxyRelay 本身的服务端口 (Web 控制台 / 智能分流端口 / TProxy 本身)
         udp dport { $WEB_PORT, $AUTO_PORT, $TPROXY_PORT } return
 
-        # 将局域网客户端发出的 UDP 流量通过 TPROXY 引导至本地代理端口并保留原始目标地址
-        meta l4proto udp meta mark set 0x1 tproxy to :$TPROXY_PORT accept
+        # 阻断公网 QUIC (UDP 443) 促使浏览器毫秒级回退至 TCP 443 以进行精确的 TLS SNI 域名嗅探
+        udp dport 443 reject
+
+        # 将局域网客户端发出的其余 UDP 流量通过 TPROXY 引导至本地代理端口并保留原始目标地址
+        meta l4proto udp meta mark set 0x1 tproxy ip to :$TPROXY_PORT accept
     }
 
     chain prerouting_nat {
         type nat hook prerouting priority dstnat - 5; policy accept;
 
-        # 忽略环回流量
+        # 忽略环回流量、非 IPv4 流量及代理自身发出的 0xff 标记流量
         iif "lo" return
+        meta nfproto != ipv4 return
+        meta mark 0xff return
 
-        # 忽略目的地址为私网网段流量
-        ip daddr { 127.0.0.0/8, 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 169.254.0.0/16, 224.0.0.0/4, 240.0.0.0/4 } return
+        # 已被 prerouting_mangle 标记为 0x1 (TPROXY UDP/DNS) 的流量直接放行，防止被后续其它 dstnat 规则劫持
+        meta mark 0x1 accept
+
+        # 忽略目的地址为私网/保留网段的流量（不包含 Fake-IP 198.18.0.0/15）
+        ip daddr { 0.0.0.0/8, 127.0.0.0/8, 10.0.0.0/8, 100.64.0.0/10, 172.16.0.0/12, 192.168.0.0/16, 169.254.0.0/16, 224.0.0.0/4, 240.0.0.0/4 } return
 
         # 忽略 ProxyRelay 本身的服务端口
         tcp dport { $WEB_PORT, $AUTO_PORT, $TPROXY_PORT } return
 
         # 重定向局域网客户端发出的 TCP 流量到本地 TProxy 端口
         meta l4proto tcp redirect to :$TPROXY_PORT
+    }
+
+    chain mangle_output {
+        type route hook output priority mangle - 5; policy accept;
+        meta mark 0xff accept
+    }
+
+    chain nat_output {
+        type nat hook output priority filter - 5; policy accept;
+        meta mark 0xff accept
     }
 
     chain postrouting {
@@ -78,13 +116,18 @@ table inet proxyrelay {
     chain input_filter {
         type filter hook input priority filter - 5; policy accept;
 
-        # 1. 仅允许环回接口 (本机) 直接访问透明代理端口
+        # 1. 允许环回接口 (本机) 访问
         iif "lo" accept
 
-        # 2. 允许经过合法 DNAT 重定向的透明代理 TCP 流量
+        # 2. 阻断局域网客户端通过 IPv6 向旁路由本机 53 端口发起 DNS 查询，促使其毫秒级回退至 IPv4 53 端口接受 TProxy 分流并防止 dnsmasq 向上游转发回环
+        meta nfproto ipv6 udp dport 53 reject
+        meta nfproto ipv6 tcp dport 53 reject with tcp reset
+
+        # 3. 允许经过合法 TPROXY (mark 0x1) 或 DNAT 重定向的透明代理流量
+        meta mark 0x1 accept
         tcp dport $TPROXY_PORT ct status dnat accept
 
-        # 3. 阻断外部网络未经重定向直接访问透明代理端口
+        # 4. 阻断外部网络未经重定向直接访问透明代理端口
         tcp dport $TPROXY_PORT reject with tcp reset
         udp dport $TPROXY_PORT reject
     }

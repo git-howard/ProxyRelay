@@ -922,7 +922,11 @@ nlohmann::json WebServer::DispatchApi(const std::string& action, const nlohmann:
         res["port_traffic_storage_desc"] = (portRecords > 0) ? ("当前占用: " + Utils::FormatBytes(portBytes) + " (" + std::to_string(portRecords) + "条记录" + (portDays > 0 ? (", 跨度" + std::to_string(portDays) + "天)") : ")")) : "当前占用: 0 B";
         return res;
     } else if (action == "save_settings") {
-        if (params.contains("auto_proxy_port")) Database::Instance().SetConfig("auto_proxy_port", params["auto_proxy_port"].get<std::string>());
+        if (params.contains("auto_proxy_port")) {
+            std::string autoPort = params["auto_proxy_port"].is_string() ? params["auto_proxy_port"].get<std::string>() : std::to_string(params["auto_proxy_port"].get<int>());
+            Database::Instance().SetConfig("auto_proxy_port", autoPort);
+            Utils::ExecCmd("uci -q set proxyrelay.global.auto_proxy_port=" + autoPort + " && uci -q commit proxyrelay");
+        }
         if (params.contains("relay_buffer_size_kb")) Database::Instance().SetConfig("relay_buffer_size_kb", params["relay_buffer_size_kb"].get<std::string>());
         if (params.contains("inbound_proxy_type")) Database::Instance().SetConfig("inbound_proxy_type", params["inbound_proxy_type"].get<std::string>());
         if (params.contains("log_retention_days")) {

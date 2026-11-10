@@ -151,7 +151,7 @@ int ClashManager::StartClash(int portId, const std::string& configYaml) {
 
     std::string processedYaml = configYaml;
     // 清除可能存在的全局冲突项
-    processedYaml = std::regex_replace(processedYaml, std::regex(R"((^|\r?\n)\s*(mixed-port|port|socks-port|redir-port|tproxy-port|allow-lan|bind-address|mode|log-level|external-controller)\s*:[^\r\n]*)"), "");
+    processedYaml = std::regex_replace(processedYaml, std::regex(R"((^|\r?\n)\s*(mixed-port|port|socks-port|redir-port|tproxy-port|allow-lan|bind-address|mode|log-level|external-controller|routing-mark|ipv6)\s*:[^\r\n]*)"), "");
 
     std::ostringstream oss;
     oss << "bind-address: \"127.0.0.1\"\n";
@@ -164,6 +164,22 @@ int ClashManager::StartClash(int portId, const std::string& configYaml) {
     oss << "mode: rule\n";
     oss << "log-level: error\n";
     oss << "external-controller: \"\"\n";
+    oss << "routing-mark: 255\n";
+    oss << "ipv6: false\n";
+    if (processedYaml.find("\ndns:") == std::string::npos && processedYaml.rfind("dns:", 0) != 0) {
+        oss << "dns:\n";
+        oss << "  enable: true\n";
+        oss << "  ipv6: false\n";
+        oss << "  default-nameserver:\n";
+        oss << "    - 223.5.5.5\n";
+        oss << "    - 119.29.29.29\n";
+        oss << "  nameserver:\n";
+        oss << "    - 223.5.5.5\n";
+        oss << "    - 119.29.29.29\n";
+        oss << "  proxy-server-nameserver:\n";
+        oss << "    - 223.5.5.5\n";
+        oss << "    - 119.29.29.29\n";
+    }
     oss << processedYaml;
 
     mkdir("/tmp/proxyrelay", 0755);
@@ -538,7 +554,8 @@ static bool ParseProtocolLink(const std::string& line, ClashNode& node) {
                            "    server: " + server + "\n"
                            "    port: " + std::to_string(port) + "\n"
                            "    cipher: " + (cipher.empty() ? "aes-256-gcm" : cipher) + "\n"
-                           "    password: \"" + password + "\"\n";
+                           "    password: \"" + password + "\"\n"
+                           "    udp: true\n";
             return true;
         }
     } else if (s.rfind("trojan://", 0) == 0) {
@@ -581,7 +598,8 @@ static bool ParseProtocolLink(const std::string& line, ClashNode& node) {
                                "    port: " + std::to_string(port) + "\n"
                                "    password: \"" + password + "\"\n"
                                "    sni: " + sni + "\n"
-                               "    skip-cert-verify: true\n";
+                               "    skip-cert-verify: true\n"
+                               "    udp: true\n";
                 return true;
             }
         }
@@ -622,7 +640,8 @@ static bool ParseProtocolLink(const std::string& line, ClashNode& node) {
                 << "    port: " << node.port << "\n"
                 << "    uuid: " << uuid << "\n"
                 << "    alterId: " << aid << "\n"
-                << "    cipher: " << cipher << "\n";
+                << "    cipher: " << cipher << "\n"
+                << "    udp: true\n";
             if (tls == "tls") {
                 oss << "    tls: true\n";
                 if (!sni.empty()) oss << "    servername: " << sni << "\n";
@@ -672,7 +691,8 @@ static bool ParseProtocolLink(const std::string& line, ClashNode& node) {
                     << "    type: vless\n"
                     << "    server: " << server << "\n"
                     << "    port: " << port << "\n"
-                    << "    uuid: " << uuid << "\n";
+                    << "    uuid: " << uuid << "\n"
+                    << "    udp: true\n";
                 if (query.find("security=tls") != std::string::npos || query.find("security=reality") != std::string::npos) {
                     oss << "    tls: true\n    skip-cert-verify: true\n";
                 }

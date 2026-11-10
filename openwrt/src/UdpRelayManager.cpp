@@ -15,13 +15,17 @@
 #include <fcntl.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <netinet/ip.h>
+#include <netinet/udp.h>
 #include <arpa/inet.h>
 #include <algorithm>
 
 namespace {
 
-// 解析 DNS UDP 53 请求报文中的首个查询域名
-std::string ParseDnsQuery(const char* data, size_t len) {
+// 解析 DNS UDP 53 请求报文中的首个查询域名与查询类型 (QTYPE)
+std::string ParseDnsQuery(const char* data, size_t len, uint16_t* outQType = nullptr, size_t* outQuestionEnd = nullptr) {
+    if (outQType) *outQType = 0;
+    if (outQuestionEnd) *outQuestionEnd = 0;
     if (len < 12) return "";
     size_t offset = 12;
     std::string domain;
@@ -37,7 +41,134 @@ std::string ParseDnsQuery(const char* data, size_t len) {
         }
         offset += labelLen;
     }
+    if (offset + 4 <= len) {
+        if (outQType) {
+            *outQType = (static_cast<uint16_t>(static_cast<uint8_t>(data[offset])) << 8) |
+                        static_cast<uint16_t>(static_cast<uint8_t>(data[offset + 1]));
+        }
+        if (outQuestionEnd) {
+            *outQuestionEnd = offset + 4;
+        }
+    }
     return domain;
+}
+
+uint16_t ComputeChecksum16(const void* data, size_t len) {
+    uint32_t sum = 0;
+    const uint16_t* ptr = reinterpret_cast<const uint16_t*>(data);
+    while (len > 1) {
+        sum += *ptr++;
+        len -= 2;
+    }
+    if (len > 0) {
+        uint16_t last = 0;
+        *reinterpret_cast<uint8_t*>(&last) = *reinterpret_cast<const uint8_t*>(ptr);
+        sum += last;
+    }
+    while (sum >> 16) {
+        sum = (sum & 0xFFFF) + (sum >> 16);
+    }
+    return static_cast<uint16_t>(~sum);
+}
+
+uint16_t ComputeUdpChecksum(uint32_t saddr, uint32_t daddr, const uint8_t* udpPkt, size_t udpLen) {
+    uint32_t sum = 0;
+    const uint16_t* s = reinterpret_cast<const uint16_t*>(&saddr);
+    const uint16_t* d = reinterpret_cast<const uint16_t*>(&daddr);
+    sum += s[0];
+    sum += s[1];
+    sum += d[0];
+    sum += d[1];
+    sum += htons(IPPROTO_UDP);
+    sum += htons(static_cast<uint16_t>(udpLen));
+
+    const uint16_t* ptr = reinterpret_cast<const uint16_t*>(udpPkt);
+    size_t len = udpLen;
+    while (len > 1) {
+        sum += *ptr++;
+        len -= 2;
+    }
+    if (len > 0) {
+        uint16_t last = 0;
+        *reinterpret_cast<uint8_t*>(&last) = *reinterpret_cast<const uint8_t*>(ptr);
+        sum += last;
+    }
+    while (sum >> 16) {
+        sum = (sum & 0xFFFF) + (sum >> 16);
+    }
+    uint16_t res = static_cast<uint16_t>(~sum);
+    return res == 0 ? 0xFFFF : res;
+}
+
+// 临时创建 IP_TRANSPARENT 套接字以原始目标地址 origDst 作为源地址回传 UDP 响应并立即关闭；
+// 若 origDst 为路由器本机已监听端口（如 dnsmasq 占用的 10.0.0.254:53）导致 bind 返回 EADDRINUSE，
+// 则自动通过 SOCK_RAW 构造原始 IPv4+UDP 报文以 origDst 源地址精准回包。
+void SendTransparentUdpReply(SOCKET fallbackSock, const sockaddr_in& origDst, const sockaddr_in& clientAddr,
+                             const char* payload, size_t payloadLen) {
+    int sockFlags = 0;
+#ifdef SOCK_CLOEXEC
+    sockFlags |= SOCK_CLOEXEC;
+#endif
+    SOCKET txSock = socket(AF_INET, SOCK_DGRAM | sockFlags, 0);
+    ssize_t sent = -1;
+    if (txSock != INVALID_SOCKET) {
+        int opt = 1;
+        setsockopt(txSock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+#ifdef SO_REUSEPORT
+        setsockopt(txSock, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt));
+#endif
+        setsockopt(txSock, SOL_IP, IP_TRANSPARENT, &opt, sizeof(opt));
+        int mark = 0xff;
+        setsockopt(txSock, SOL_SOCKET, SO_MARK, &mark, sizeof(mark));
+        if (bind(txSock, reinterpret_cast<const sockaddr*>(&origDst), sizeof(origDst)) == 0) {
+            sent = sendto(txSock, payload, payloadLen, 0,
+                          reinterpret_cast<const sockaddr*>(&clientAddr), sizeof(clientAddr));
+        }
+        closesocket(txSock);
+    }
+    if (sent < 0) {
+        SOCKET rawSock = socket(AF_INET, SOCK_RAW | sockFlags, IPPROTO_RAW);
+        if (rawSock != INVALID_SOCKET) {
+            int one = 1;
+            setsockopt(rawSock, IPPROTO_IP, IP_HDRINCL, &one, sizeof(one));
+            int mark = 0xff;
+            setsockopt(rawSock, SOL_SOCKET, SO_MARK, &mark, sizeof(mark));
+
+            size_t udpLen = sizeof(udphdr) + payloadLen;
+            size_t totalLen = sizeof(iphdr) + udpLen;
+            std::vector<uint8_t> pkt(totalLen, 0);
+
+            auto* iph = reinterpret_cast<iphdr*>(pkt.data());
+            iph->ihl = 5;
+            iph->version = 4;
+            iph->tos = 0;
+            iph->tot_len = htons(static_cast<uint16_t>(totalLen));
+            iph->id = htons(0x524c);
+            iph->frag_off = 0;
+            iph->ttl = 64;
+            iph->protocol = IPPROTO_UDP;
+            iph->saddr = origDst.sin_addr.s_addr;
+            iph->daddr = clientAddr.sin_addr.s_addr;
+            iph->check = 0;
+            iph->check = ComputeChecksum16(iph, sizeof(iphdr));
+
+            auto* udph = reinterpret_cast<udphdr*>(pkt.data() + sizeof(iphdr));
+            udph->source = origDst.sin_port;
+            udph->dest = clientAddr.sin_port;
+            udph->len = htons(static_cast<uint16_t>(udpLen));
+            udph->check = 0;
+            std::memcpy(pkt.data() + sizeof(iphdr) + sizeof(udphdr), payload, payloadLen);
+            udph->check = ComputeUdpChecksum(iph->saddr, iph->daddr, pkt.data() + sizeof(iphdr), udpLen);
+
+            sent = sendto(rawSock, pkt.data(), pkt.size(), 0,
+                          reinterpret_cast<const sockaddr*>(&clientAddr), sizeof(clientAddr));
+            closesocket(rawSock);
+        }
+    }
+    if (sent < 0 && fallbackSock != INVALID_SOCKET) {
+        sendto(fallbackSock, payload, payloadLen, 0,
+               reinterpret_cast<const sockaddr*>(&clientAddr), sizeof(clientAddr));
+    }
 }
 
 // 封装 SOCKS5 UDP 请求报文 (RFC 1928 Section 7)
@@ -358,31 +489,102 @@ void UdpRelayManager::HandleTransparentUdp(SOCKET udpListenSock, const sockaddr_
     inet_ntop(AF_INET, &origDst.sin_addr, targetIP, sizeof(targetIP));
     int targetPort = ntohs(origDst.sin_port);
 
+    if (targetPort == 443) {
+        // 忽略 QUIC (UDP 443)，促使客户端迅速降级为 TCP 443 以进行精确的 SNI 嗅探
+        return;
+    }
+
     // 1. 用户与设备权限鉴权
     UserInfo user;
     if (!UserManager::Instance().AuthenticateByIP(clientIP, user)) {
         return;
     }
 
-    // 2. DNS 域名嗅探 (目标端口为 53 时提取真实被查询域名)
+    // 2. DNS 域名嗅探 (目标端口为 53 时提取真实被查询域名与查询类型)
+    uint16_t dnsQType = 0;
+    size_t dnsQuestionEnd = 0;
     std::string targetDomain;
     if (targetPort == 53) {
-        targetDomain = ParseDnsQuery(data, len);
+        targetDomain = ParseDnsQuery(data, len, &dnsQType, &dnsQuestionEnd);
     }
 
     std::string displayTarget = targetDomain.empty() ? targetIP : targetDomain;
 
-    // 3. 路由规则匹配
+    // 3. 路由规则匹配 (当为 DNS 查询且已提取出被查询域名时，以被查询域名匹配分流规则，忽略 DNS 服务器本身的私网/国内 IP)
+    std::string matchIP = (targetPort == 53 && !targetDomain.empty()) ? "" : std::string(targetIP);
     std::string matchedGroup;
     bool isFallback = false;
-    int proxyId = RuleManager::Instance().GetMatchingProxyId(targetIP, targetDomain, &matchedGroup, &isFallback);
+    int proxyId = RuleManager::Instance().GetMatchingProxyId(matchIP, targetDomain, &matchedGroup, &isFallback);
     if (proxyId == -2) { // 防火墙阻断
         return;
     }
 
-    // 4. 获取或新建 UDP 会话
+    // 4. 针对走代理分流的 DNS 查询 (UDP 53 && proxyId != 0)：
+    //    (a) 若查询类型为 AAAA (28) 或 HTTPS/SVCB (65)，立即返回标准空应答 (NOERROR, ANCOUNT=0)，
+    //        防止客户端使用未代理的 IPv6、QUIC 或 ECH 加密 SNI；
+    //    (b) 其余查询 (如 A 记录) 通过代理隧道以 DNS-over-TCP 方式向 8.8.8.8:53 / 1.1.1.1:53 进行无污染解析，
+    //        兼容所有代理协议（包括不支持 UDP 的节点或 HTTP/HTTPS 代理）并彻底消除 GFW DNS 污染。
+    if (targetPort == 53 && proxyId != 0 && !targetDomain.empty()) {
+        if ((dnsQType == 28 || dnsQType == 65) && dnsQuestionEnd >= 16 && dnsQuestionEnd <= len) {
+            std::vector<char> emptyReply(data, data + dnsQuestionEnd);
+            emptyReply[2] = static_cast<char>(0x81); // QR=1, Opcode=0, RD=1
+            emptyReply[3] = static_cast<char>(0x80); // RA=1, RCODE=0 (NOERROR)
+            emptyReply[4] = 0x00; emptyReply[5] = 0x01; // QDCOUNT = 1
+            emptyReply[6] = 0x00; emptyReply[7] = 0x00; // ANCOUNT = 0
+            emptyReply[8] = 0x00; emptyReply[9] = 0x00; // NSCOUNT = 0
+            emptyReply[10] = 0x00; emptyReply[11] = 0x00; // ARCOUNT = 0
+            SendTransparentUdpReply(udpListenSock, origDst, clientAddr, emptyReply.data(), emptyReply.size());
+            return;
+        }
+
+        std::string queryCopy(data, len);
+        int uid = user.id;
+        std::string uname = user.username;
+        std::string cip = clientIP;
+        std::thread([udpListenSock, clientAddr, origDst, queryCopy, proxyId, matchedGroup, isFallback, uid, uname, cip, displayTarget]() {
+            auto connRes = ProxyServer::Instance().ConnectWithFallback(proxyId, "8.8.8.8", 53, matchedGroup, isFallback);
+            if (connRes.socket == INVALID_SOCKET) {
+                connRes = ProxyServer::Instance().ConnectWithFallback(proxyId, "1.1.1.1", 53, matchedGroup, isFallback);
+            }
+            if (connRes.socket == INVALID_SOCKET) return;
+
+            struct timeval tv{};
+            tv.tv_sec = 4;
+            tv.tv_usec = 0;
+            setsockopt(connRes.socket, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+            setsockopt(connRes.socket, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
+
+            uint16_t qlen = htons(static_cast<uint16_t>(queryCopy.size()));
+            std::string tcpReq;
+            tcpReq.reserve(2 + queryCopy.size());
+            tcpReq.append(reinterpret_cast<const char*>(&qlen), 2);
+            tcpReq.append(queryCopy);
+
+            if (send(connRes.socket, tcpReq.data(), tcpReq.size(), MSG_NOSIGNAL) == static_cast<ssize_t>(tcpReq.size())) {
+                uint8_t lenBuf[2] = {};
+                ssize_t r1 = recv(connRes.socket, reinterpret_cast<char*>(lenBuf), 2, MSG_WAITALL);
+                if (r1 == 2) {
+                    uint16_t respLen = (static_cast<uint16_t>(lenBuf[0]) << 8) | static_cast<uint16_t>(lenBuf[1]);
+                    if (respLen >= 12 && respLen <= 4096) {
+                        std::vector<char> respBuf(respLen);
+                        ssize_t r2 = recv(connRes.socket, respBuf.data(), respLen, MSG_WAITALL);
+                        if (r2 == static_cast<ssize_t>(respLen)) {
+                            SendTransparentUdpReply(udpListenSock, origDst, clientAddr, respBuf.data(), respLen);
+                            TrafficMonitor::Instance().RecordUpload(uid, connRes.portId, queryCopy.size());
+                            TrafficMonitor::Instance().RecordDownload(uid, connRes.portId, respLen);
+                            ConnectionLogger::Instance().Log(uname, cip, displayTarget, 53, "TPROXY_DNS", connRes.description, "透明代理");
+                        }
+                    }
+                }
+            }
+            closesocket(connRes.socket);
+        }).detach();
+        return;
+    }
+
+    // 5. 获取或新建 UDP 会话
     std::string sessionKey = std::string(clientIP) + ":" + std::to_string(clientPort) + "_" +
-                             targetIP + ":" + std::to_string(targetPort);
+                             targetIP + ":" + std::to_string(targetPort) + "_p" + std::to_string(proxyId);
 
     std::shared_ptr<UdpSession> session;
     bool isNewSession = false;
@@ -437,12 +639,9 @@ void UdpRelayManager::HandleTransparentUdp(SOCKET udpListenSock, const sockaddr_
 
             if (session->upstreamSock == INVALID_SOCKET) return;
 
-            // 创建 IP_TRANSPARENT 伪造套接字以在回包时保持原始目标源地址
-            session->spoofSock = socket(AF_INET, SOCK_DGRAM | sockFlags, 0);
-            int opt = 1;
-            setsockopt(session->spoofSock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
-            setsockopt(session->spoofSock, SOL_IP, IP_TRANSPARENT, &opt, sizeof(opt));
-            bind(session->spoofSock, (sockaddr*)&origDst, sizeof(origDst));
+            int mark = 0xff;
+            setsockopt(session->upstreamSock, SOL_SOCKET, SO_MARK, &mark, sizeof(mark));
+            session->spoofSock = INVALID_SOCKET;
 
             sessions_[sessionKey] = session;
             isNewSession = true;
@@ -451,7 +650,7 @@ void UdpRelayManager::HandleTransparentUdp(SOCKET udpListenSock, const sockaddr_
 
     session->lastActive = std::chrono::steady_clock::now();
 
-    // 5. 启动响应包监听线程
+    // 6. 启动响应包监听线程
     if (isNewSession) {
         session->connId = RealtimeConnectionManager::Instance().AddConnection(
             session->username, session->clientIP, session->displayTarget,
@@ -493,16 +692,7 @@ void UdpRelayManager::HandleTransparentUdp(SOCKET udpListenSock, const sockaddr_
                         }
                     }
 
-                    // 通过伪造源地址的 spoofSock 回传响应，若失败则通过监听端口回传
-                    ssize_t sent = -1;
-                    if (session->spoofSock != INVALID_SOCKET) {
-                        sent = sendto(session->spoofSock, payload, payloadLen, 0,
-                                      (sockaddr*)&session->clientAddr, sizeof(session->clientAddr));
-                    }
-                    if (sent < 0 && udpListenSock != INVALID_SOCKET) {
-                        sendto(udpListenSock, payload, payloadLen, 0,
-                               (sockaddr*)&session->clientAddr, sizeof(session->clientAddr));
-                    }
+                    SendTransparentUdpReply(udpListenSock, session->origDst, session->clientAddr, payload, payloadLen);
 
                     TrafficMonitor::Instance().RecordDownload(session->userId, session->portId, payloadLen);
                     RealtimeConnectionManager::Instance().RecordTraffic(session->connId, 0, payloadLen);
@@ -519,11 +709,37 @@ void UdpRelayManager::HandleTransparentUdp(SOCKET udpListenSock, const sockaddr_
         session->workerThread.detach();
     }
 
-    // 6. 发送数据包至上游节点或目标服务器
+    // 7. 发送数据包至上游节点或目标服务器
     if (session->isDirect) {
-        sendto(session->upstreamSock, data, len, 0, (sockaddr*)&origDst, sizeof(origDst));
+        sockaddr_in directDst = origDst;
+        if (targetPort == 53 && !targetDomain.empty()) {
+            uint32_t ipHostOrder = ntohl(origDst.sin_addr.s_addr);
+            bool isPrivateDst = ((ipHostOrder & 0xFF000000) == 0x0A000000) || // 10.0.0.0/8
+                                ((ipHostOrder & 0xFFF00000) == 0xAC100000) || // 172.16.0.0/12
+                                ((ipHostOrder & 0xFFFF0000) == 0xC0A80000) || // 192.168.0.0/16
+                                ((ipHostOrder & 0xFF000000) == 0x7F000000);   // 127.0.0.0/8
+            auto endsWith = [](const std::string& s, const std::string& suffix) {
+                return s.size() >= suffix.size() &&
+                       s.compare(s.size() - suffix.size(), suffix.size(), suffix) == 0;
+            };
+            bool isInternalDomain = (targetDomain.find('.') == std::string::npos) ||
+                                    endsWith(targetDomain, ".lan") ||
+                                    endsWith(targetDomain, ".local") ||
+                                    endsWith(targetDomain, ".arpa") ||
+                                    endsWith(targetDomain, ".internal") ||
+                                    endsWith(targetDomain, ".home") ||
+                                    endsWith(targetDomain, ".corp") ||
+                                    endsWith(targetDomain, ".localdomain") ||
+                                    endsWith(targetDomain, ".shanghaiit.com");
+            if (isPrivateDst && !isInternalDomain) {
+                // 当透明代理接收到发往本机/局域网 DNS (如 10.0.0.254:53) 的公网直连域名查询时，
+                // 直接向公共国内 DNS (223.5.5.5:53) 发起解析，避免交回本机 dnsmasq 转发至主路由/内网 DNS 产生回环
+                inet_pton(AF_INET, "223.5.5.5", &directDst.sin_addr);
+            }
+        }
+        sendto(session->upstreamSock, data, len, 0, (sockaddr*)&directDst, sizeof(directDst));
     } else {
-        std::string forwardHost = targetDomain.empty() ? targetIP : targetDomain;
+        std::string forwardHost = (targetPort == 53 || targetDomain.empty()) ? targetIP : targetDomain;
         auto packet = BuildSocks5UdpPacket(forwardHost, targetPort, data, len);
         sendto(session->upstreamSock, packet.data(), packet.size(), 0,
                (sockaddr*)&session->upstreamRelayAddr, sizeof(session->upstreamRelayAddr));

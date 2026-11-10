@@ -155,7 +155,9 @@ int main(int argc, char* argv[]) {
     }
 
     if (tproxyEnabledStr == "1" && tproxyPort > 0) {
+        Utils::ExecCmd("uci -q set proxyrelay.global.tproxy_enabled=1 && uci -q set proxyrelay.global.tproxy_port=" + std::to_string(tproxyPort) + " && uci -q commit proxyrelay");
         TProxyServer::Instance().Start(tproxyPort);
+        Utils::ExecCmd("sh /usr/share/proxyrelay/firewall.include reload >/dev/null 2>&1 &");
         std::cout << "[TProxy] Transparent proxy gateway is ENABLED on port " << tproxyPort << " (TCP/UDP)" << std::endl;
     } else {
         std::cout << "[TProxy] Transparent proxy gateway is DISABLED by default (Can be enabled in Settings)." << std::endl;

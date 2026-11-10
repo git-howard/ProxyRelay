@@ -359,7 +359,19 @@ bool ClashManager::StartOrReloadUnifiedInternal() {
     oss << "mode: rule\n";
     oss << "log-level: error\n";
     oss << "ipv6: false\n";
-    oss << "find-process-mode: off\n\n";
+    oss << "find-process-mode: off\n";
+    oss << "dns:\n";
+    oss << "  enable: true\n";
+    oss << "  ipv6: false\n";
+    oss << "  default-nameserver:\n";
+    oss << "    - 223.5.5.5\n";
+    oss << "    - 119.29.29.29\n";
+    oss << "  nameserver:\n";
+    oss << "    - 223.5.5.5\n";
+    oss << "    - 119.29.29.29\n";
+    oss << "  proxy-server-nameserver:\n";
+    oss << "    - 223.5.5.5\n";
+    oss << "    - 119.29.29.29\n\n";
 
     oss << "listeners:\n";
     for (const auto& b : bindings) {

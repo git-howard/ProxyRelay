@@ -314,23 +314,25 @@ void RuleManager::LoadChinaDirectConfig() {
     // 初始化国内常见主流服务域名列表
     if (popularChinaDomains_.empty()) {
         popularChinaDomains_ = {
-            "baidu.com", "bdstatic.com", "baidupcs.com", "hao123.com",
-            "qq.com", "tencent.com", "wechat.com", "weixin.com", "qpic.cn", "qlogo.cn", "tenpay.com", "gtimg.com", "myqcloud.com", "kugou.com", "kuwo.cn",
-            "taobao.com", "tmall.com", "alipay.com", "aliyun.com", "alibaba.com", "alicdn.com", "1688.com", "dingtalk.com", "ele.me", "cainiao.com",
-            "douyin.com", "bytedance.com", "toutiao.com", "feishu.cn", "zijieapi.com", "pstatp.com", "ixigua.com",
-            "jd.com", "360buy.com", "jdpay.com",
-            "163.com", "126.com", "netease.com", "yeah.net", "youdao.com",
-            "bilibili.com", "bilivideo.com", "hdslb.com",
-            "zhihu.com", "zhimg.com",
+            "baidu.com", "bdstatic.com", "baidupcs.com", "bdimg.com", "bcebos.com", "hao123.com",
+            "qq.com", "tencent.com", "wechat.com", "weixin.com", "qpic.cn", "qlogo.cn", "tenpay.com", "gtimg.com", "myqcloud.com", "wxlivecdn.com", "smtcdns.net", "cdntip.com", "dnsv1.com", "kugou.com", "kuwo.cn",
+            "taobao.com", "tmall.com", "alipay.com", "aliyun.com", "aliyuncs.com", "alibaba.com", "alicdn.com", "tbcache.com", "mmstat.com", "tanx.com", "alibabausercontent.com", "1688.com", "dingtalk.com", "ele.me", "cainiao.com",
+            "douyin.com", "douyincdn.com", "doubao.com", "volces.com", "volcengine.com", "ctobsnssdk.com", "bytedance.com", "byteimg.com", "bytednsdoc.com", "snssdk.com", "toutiao.com", "toutiaovod.com", "feishu.cn", "zijieapi.com", "pstatp.com", "ixigua.com",
+            "jd.com", "360buy.com", "360buyimg.com", "jdpay.com", "jdwl.com",
+            "163.com", "126.com", "126.net", "127.net", "netease.com", "yeah.net", "youdao.com",
+            "bilibili.com", "bilivideo.com", "hdslb.com", "biliapi.net",
+            "zhihu.com", "zhimg.com", "douban.com", "doubanio.com", "smzdm.com", "zdmimg.com",
             "weibo.com", "sina.com", "weibo.cn", "sinaimg.cn", "sinajs.cn",
-            "meituan.com", "dianping.com", "kuaishou.com", "yximgs.com",
+            "meituan.com", "meituan.net", "dianping.com", "dpfile.com", "kuaishou.com", "yximgs.com",
             "xiaohongshu.com", "xhscdn.com",
             "pinduoduo.com", "yangkeduo.com", "pddpic.com",
-            "ctrip.com", "qunar.com", "amap.com", "autonavi.com",
-            "iqiyi.com", "youku.com", "mgtv.com", "sohu.com", "ximalaya.com", "douyu.com", "huya.com",
-            "csdn.net", "gitee.com", "cnki.net", "wps.cn",
-            "mi.com", "xiaomi.com", "huawei.com", "vmall.com", "oppo.com", "vivo.com", "honor.com",
-            "apple.com.cn", "unionpay.com", "12306.cn", "gov.cn"
+            "ctrip.com", "c-ctrip.com", "qunar.com", "amap.com", "autonavi.com",
+            "iqiyi.com", "iqiyipic.com", "youku.com", "ykimg.com", "mgtv.com", "sohu.com", "ximalaya.com", "douyu.com", "huya.com", "cibntv.net", "miguvideo.com",
+            "csdn.net", "gitee.com", "cnki.net", "wps.cn", "oschina.net",
+            "mi.com", "xiaomi.com", "miui.com", "huawei.com", "vmall.com", "dbankcdn.com", "oppo.com", "vivo.com", "honor.com",
+            "eastmoney.com", "dfcfw.com", "pingan.com", "cmbchina.com", "zhipin.com", "bosszhipin.com", "58.com", "lianjia.com", "ke.com", "sf-express.com", "10010.com",
+            "apple.com.cn", "icloud.com.cn", "unionpay.com", "12306.cn", "gov.cn", "oray.com", "oray.net", "qpon",
+            "arpa", "lan", "local", "internal", "home", "corp", "localdomain"
         };
     }
 
@@ -418,11 +420,12 @@ bool RuleManager::IsChinaTrafficLocked(const std::string& ip, const std::string&
 
     // 1. 局域网 / 私网
     if (chinaDirectLan_) {
-        if (!ip.empty() && MatchCIDR(ip, lanCIDRs_)) {
+        if (domain.empty() && !ip.empty() && MatchCIDR(ip, lanCIDRs_)) {
             return true;
         }
         if (domain == "localhost" || domain == "127.0.0.1" ||
-            (domain.length() > 6 && domain.substr(domain.length() - 6) == ".local")) {
+            (domain.length() > 6 && domain.substr(domain.length() - 6) == ".local") ||
+            (domain.length() > 4 && domain.substr(domain.length() - 4) == ".lan")) {
             return true;
         }
     }
@@ -463,14 +466,18 @@ bool RuleManager::IsChinaTrafficLocked(const std::string& ip, const std::string&
     }
 
     // 5. 中国大陆公网 IP 段 (chnroute)
-    if (chinaDirectIps_ && !ip.empty()) {
-        // 当已通过 SNI/Host 嗅探出真实域名时，如果域名并非已知国内站点或 .cn，
-        // 极有可能是国外域名在境内被 GFW 进行 DNS 污染为虚假的国内运营商 IP（如 202.101.48.65 等）。
-        // 此时绝不能仅因被污染的客户端目标 IP 落在 chnroute 中就断定为国内流量，
-        // 否则将导致国外域名被误判为本地直连并直连虚假 IP 超时。
-        // 因此只有在无法嗅探到域名（纯 IP 连接）时，才回退到基于目标 IP 的 chnroute 判定。
-        if (domain.empty()) {
-            if (!chnRoute_.empty() && MatchCIDR(ip, chnRoute_)) {
+    if (chinaDirectIps_ && !ip.empty() && !chnRoute_.empty()) {
+        static const std::vector<std::string> kPoisonedForeignDomains = {
+            "google.com", "googleapis.com", "gstatic.com", "youtube.com", "ytimg.com", "googlevideo.com",
+            "chatgpt.com", "openai.com", "github.com", "githubusercontent.com", "x.com", "twitter.com", "twimg.com",
+            "t.me", "telegram.org", "facebook.com", "fbcdn.net", "instagram.com", "cdninstagram.com", "whatsapp.com",
+            "wikipedia.org", "huggingface.co", "claude.ai", "anthropic.com", "discord.com", "discordapp.com",
+            "reddit.com", "netflix.com", "nflxvideo.net", "docker.com", "v2ex.com", "nytimes.com", "bbc.com",
+            "wsj.com", "reuters.com", "bloomberg.com", "twitch.tv", "spotify.com", "medium.com", "quora.com",
+            "pinterest.com", "dropbox.com", "duckduckgo.com"
+        };
+        if (domain.empty() || !MatchDomain(domain, kPoisonedForeignDomains)) {
+            if (MatchCIDR(ip, chnRoute_)) {
                 return true;
             }
         }

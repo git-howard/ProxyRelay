@@ -887,21 +887,24 @@ SOCKET ProxyServer::ConnectDirect(const std::string& targetHost, int targetPort)
         return INVALID_SOCKET;
     }
 
-    SOCKET s = socket(result->ai_family, result->ai_socktype, result->ai_protocol);
-    if (s == INVALID_SOCKET) {
-        freeaddrinfo(result);
-        return INVALID_SOCKET;
-    }
+    SOCKET s = INVALID_SOCKET;
+    for (struct addrinfo* rp = result; rp != nullptr; rp = rp->ai_next) {
+        s = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
+        if (s == INVALID_SOCKET) continue;
 
-    // 5秒超时
-    timeval tv{5, 0};
-    setsockopt(s, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
-    setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+        int mark = 0xff;
+        setsockopt(s, SOL_SOCKET, SO_MARK, &mark, sizeof(mark));
 
-    if (connect(s, result->ai_addr, result->ai_addrlen) != 0) {
+        // 5秒超时
+        timeval tv{5, 0};
+        setsockopt(s, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
+        setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+
+        if (connect(s, rp->ai_addr, rp->ai_addrlen) == 0) {
+            break;
+        }
         closesocket(s);
-        freeaddrinfo(result);
-        return INVALID_SOCKET;
+        s = INVALID_SOCKET;
     }
 
     freeaddrinfo(result);
@@ -1059,9 +1062,17 @@ SOCKET ProxyServer::ConnectToHttpProxy(const ProxyPort& port, const std::string&
     std::string req = ss.str();
     if (send(s, req.c_str(), req.length(), 0) != (int)req.length()) { closesocket(s); return INVALID_SOCKET; }
 
-    char buf[512] = {};
-    int recvd = recv(s, buf, sizeof(buf) - 1, 0);
-    if (recvd <= 0 || std::string(buf).find("200") == std::string::npos) {
+    std::string resp;
+    char ch = 0;
+    while (resp.size() < 8192) {
+        int r = recv(s, &ch, 1, 0);
+        if (r <= 0) break;
+        resp.push_back(ch);
+        if (resp.size() >= 4 && resp.compare(resp.size() - 4, 4, "\r\n\r\n") == 0) break;
+    }
+    size_t firstLineEnd = resp.find("\r\n");
+    std::string statusLine = (firstLineEnd != std::string::npos) ? resp.substr(0, firstLineEnd) : resp;
+    if (statusLine.find(" 200") == std::string::npos) {
         closesocket(s);
         return INVALID_SOCKET;
     }
@@ -1154,8 +1165,12 @@ void ProxyServer::RelayData(SOCKET client, SOCKET upstream, int userId, int port
             RealtimeConnectionManager::Instance().RecordTraffic(connId, 0, n);
         }
 
-        if ((fds[0].revents & (POLLERR | POLLHUP | POLLNVAL)) ||
-            (fds[1].revents & (POLLERR | POLLHUP | POLLNVAL))) {
+        if ((fds[0].revents & (POLLERR | POLLNVAL)) ||
+            (fds[1].revents & (POLLERR | POLLNVAL))) {
+            break;
+        }
+        if (((fds[0].revents & POLLHUP) && !(fds[0].revents & POLLIN) && !tlsHasPending) ||
+            ((fds[1].revents & POLLHUP) && !(fds[1].revents & POLLIN))) {
             break;
         }
     }

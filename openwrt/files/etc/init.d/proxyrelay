@@ -48,6 +48,7 @@ stop_service() {
 	if [ -x /usr/share/proxyrelay/firewall.include ]; then
 		sh /usr/share/proxyrelay/firewall.include stop >/dev/null 2>&1 || true
 	fi
+	killall -q proxyrelay 2>/dev/null || true
 	killall -9 mihomo 2>/dev/null || true
 }
 
