@@ -1039,8 +1039,6 @@ PCCERT_CONTEXT SchannelSession::GetOrCreateSelfSignedCert(const std::string& cus
         "-KeyUsage DigitalSignature,KeyEncipherment -Type SSLServerAuthentication "
         "-NotAfter (Get-Date).AddYears(10); "
         "if ($cert) { "
-        "  $pwd = ConvertTo-SecureString -String 'ProxyRelay' -Force -AsPlainText; "
-        "  Export-PfxCertificate -Cert $cert -FilePath 'ProxyRelay.pfx' -Password $pwd | Out-Null; "
         "  Export-Certificate -Cert $cert -FilePath 'ProxyRelay.crt' | Out-Null; "
         "  Write-Output 'OK'; "
         "} else { Write-Output 'FAIL'; }\"";
